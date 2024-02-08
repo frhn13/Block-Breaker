@@ -1,10 +1,11 @@
 import pygame as pg
+import random
 
 from Block import Block
 from Player import Player
 from Ball import Ball
-
 from Constants import *
+from Powerup import PowerUp
 
 pg.init()
 
@@ -21,14 +22,25 @@ clock = pg.time.Clock()
 
 running = True
 
+# Images
+player_img = pg.image.load("img/playerBlock.png").convert_alpha()
+block_img = pg.image.load("img/Block.png").convert_alpha()
+ball_img = pg.image.load("img/playerBlock.png").convert_alpha()
+power_up_imgs = [pg.image.load("img/bigger.png").convert_alpha(),
+                pg.image.load("img/smaller.png").convert_alpha(),
+                pg.image.load("img/life.png").convert_alpha(),
+                pg.image.load("img/ball.png").convert_alpha(),
+                pg.image.load("img/more_ball.png").convert_alpha()]
+
 # Make objects
-player = Player(SCREEN_WIDTH//2, SCREEN_HEIGHT-50, 10, 150, 15)
-ball = Ball(player.rect.centerx, player.rect.top, 5, 5, 5)
+player = Player(SCREEN_WIDTH//2, SCREEN_HEIGHT-50, 10, 150, 15, player_img)
+ball = Ball(player.rect.centerx, player.rect.top, 5, 5, 5, ball_img)
 
 # Make the sprite groups
 all_sprites = pg.sprite.Group()
 ball_group = pg.sprite.Group()
 block_group = pg.sprite.Group()
+power_up_group = pg.sprite.Group()
 
 all_sprites.add(player)
 all_sprites.add(ball)
@@ -36,7 +48,7 @@ ball_group.add(ball)
 
 for x in range(5):
     for y in range(5):
-        block = Block(y*SCREEN_WIDTH//5, x*15, SCREEN_WIDTH//5, 15)
+        block = Block(y*SCREEN_WIDTH//5, x*15, SCREEN_WIDTH//5, 15, block_img)
         block_group.add(block)
         all_sprites.add(block)
 
@@ -70,6 +82,13 @@ while running:
     for ball in ball_group:
         ballBlockCollision = pg.sprite.spritecollide(ball, block_group, True)
         for collision in ballBlockCollision:
+            if random.random() > 0:
+                power_up_type = random.randint(0, 4)
+                power_up_speed = random.randint(1, 5)
+                power_up = PowerUp(collision.rect.centerx, collision.rect.bottom, power_up_imgs[power_up_type],
+                                   POWER_UPS[power_up_type], power_up_speed)
+                power_up_group.add(power_up)
+                all_sprites.add(power_up)
             if ball.rect.centerx < (collision.rect.centerx - (collision.rect.centerx // 4)):
                 ball.xDirection = -1
             if (collision.rect.centerx - (collision.rect.centerx // 4)) <= ball.rect.centerx < (

@@ -23,7 +23,7 @@ running = True
 
 # Make objects
 player = Player(SCREEN_WIDTH//2, SCREEN_HEIGHT-50, 10, 150, 15)
-ball = Ball(player.rect.centerx, player.rect.top, 5, 30, 5)
+ball = Ball(player.rect.centerx, player.rect.top, 5, 5, 5)
 
 # Make the sprite groups
 all_sprites = pg.sprite.Group()
@@ -50,16 +50,44 @@ while running:
 
     playerBallCollision = pg.sprite.spritecollide(player, ball_group, False)
     for collision in playerBallCollision:
-        if collision.rect.x < player.rect.centerx:
+        if collision.rect.centerx < (player.rect.centerx - (player.rect.centerx // 4)):
             collision.xDirection = -1
+        if (player.rect.centerx - (player.rect.centerx // 4)) <= collision.rect.centerx < (player.rect.centerx - (player.rect.centerx // 6)):
+            collision.xDirection = -0.75
+        elif (player.rect.centerx - (player.rect.centerx // 6)) <= collision.rect.centerx < player.rect.centerx:
+            collision.xDirection = -0.5
+        elif (player.rect.centerx + player.rect.centerx // 6) >= collision.rect.centerx > player.rect.centerx:
+            collision.xDirection = 0.5
+        elif (player.rect.centerx + player.rect.centerx // 4) >= collision.rect.centerx > (player.rect.centerx + player.rect.centerx // 6):
+            collision.xDirection = 0.75
         else:
             collision.xDirection = 1
         collision.yDirection = -1
+        print(len(block_group))
+        if len(block_group) == 0:
+            running = False
 
     for ball in ball_group:
         ballBlockCollision = pg.sprite.spritecollide(ball, block_group, True)
         for collision in ballBlockCollision:
-            ball.yDirection = 1
+            if ball.rect.centerx < (collision.rect.centerx - (collision.rect.centerx // 4)):
+                ball.xDirection = -1
+            if (collision.rect.centerx - (collision.rect.centerx // 4)) <= ball.rect.centerx < (
+                    collision.rect.centerx - (collision.rect.centerx // 6)):
+                ball.xDirection = -0.75
+            elif (collision.rect.centerx - (collision.rect.centerx // 6)) <= ball.rect.centerx < collision.rect.centerx:
+                ball.xDirection = -0.5
+            elif (collision.rect.centerx + collision.rect.centerx // 6) >= ball.rect.centerx > collision.rect.centerx:
+                ball.xDirection = 0.5
+            elif (collision.rect.centerx + collision.rect.centerx // 4) >= ball.rect.centerx > (
+                    collision.rect.centerx + collision.rect.centerx // 6):
+                ball.xDirection = 0.75
+            else:
+                ball.xDirection = 1
+            if abs(ball.rect.centery - collision.rect.top) < abs(ball.rect.centery - collision.rect.bottom):
+                ball.yDirection = -1
+            else:
+                ball.yDirection = 1
 
     for event in pg.event.get():
         if event.type == pg.QUIT:

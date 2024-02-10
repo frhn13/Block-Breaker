@@ -13,6 +13,11 @@ screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pg.display.set_caption("Block Breaker")
 
 
+def write_text(x, y, contents, colour, font):
+    text = font.render(contents, True, colour)
+    screen.blit(text, (x, y))
+
+
 def draw_bg():
     screen.fill(BG)
 
@@ -28,13 +33,19 @@ block_img = pg.image.load("img/Block.png").convert_alpha()
 ball_img = pg.image.load("img/playerBlock.png").convert_alpha()
 power_up_imgs = [pg.image.load("img/bigger.png").convert_alpha(),
                 pg.image.load("img/smaller.png").convert_alpha(),
-                pg.image.load("img/life.png").convert_alpha(),
                 pg.image.load("img/ball.png").convert_alpha(),
+                pg.image.load("img/life.png").convert_alpha(),
                 pg.image.load("img/more_ball.png").convert_alpha()]
+lives_img = pg.transform.scale(pg.image.load("img/heart.png").convert_alpha(), (20, 20))
+
+# Fonts
+lives_font = pg.font.SysFont("Futura", 40)
 
 # Make objects
-player = Player(SCREEN_WIDTH//2, SCREEN_HEIGHT-50, 10, 150, 15, player_img)
+player = Player(SCREEN_WIDTH//2, SCREEN_HEIGHT-75, 10, 150, 15, player_img)
 ball = Ball(player.rect.centerx, player.rect.top, 5, 5, 5, ball_img)
+
+player_lives = 3
 
 # Make the sprite groups
 all_sprites = pg.sprite.Group()
@@ -60,6 +71,11 @@ while running:
     all_sprites.update()
     all_sprites.draw(screen)
 
+    write_text(10, SCREEN_HEIGHT - 50, f"LIVES: ", BLACK, lives_font)
+    for x in range(player_lives):
+        screen.blit(lives_img, (100 + (x*30), SCREEN_HEIGHT - 45))
+
+    # Collisions
     playerBallCollision = pg.sprite.spritecollide(player, ball_group, False)
     for collision in playerBallCollision:
         if collision.rect.centerx < (player.rect.centerx - (player.rect.centerx // 4)):
@@ -75,9 +91,31 @@ while running:
         else:
             collision.xDirection = 1
         collision.yDirection = -1
-        print(len(block_group))
-        if len(block_group) == 0:
-            running = False
+
+    playerPowerUpCollision = pg.sprite.spritecollide(player, power_up_group, True)
+    for collision in playerPowerUpCollision:
+        match collision.power_up_type:
+            case "IncreaseSize":
+                player.image = pg.transform.scale(player.image, (player.image.get_width() + 10, player.image.get_height()))
+                if player.image.get_width() > 250:
+                    player.image = pg.transform.scale(player.image, (250, player.image.get_height()))
+            case "DecreaseSize":
+                player.image = pg.transform.scale(player.image, (player.image.get_width() - 10, player.image.get_height()))
+                if player.image.get_width() < 80:
+                    player.image = pg.transform.scale(player.image, (80, player.image.get_height()))
+            case "AddBall":
+                ball = Ball(player.rect.centerx, player.rect.top, 5, 5, 5, ball_img)
+                ball_group.add(ball)
+                all_sprites.add(ball)
+            case "ExtraLife":
+                if player_lives < 5:
+                    player_lives += 1
+            case "AddManyBalls":
+                no_balls = random.randint(2, 5)
+                for x in range(no_balls):
+                    ball = Ball(player.rect.centerx, player.rect.top, 5, 5, 5, ball_img)
+                    ball_group.add(ball)
+                    all_sprites.add(ball)
 
     for ball in ball_group:
         ballBlockCollision = pg.sprite.spritecollide(ball, block_group, True)
@@ -108,6 +146,19 @@ while running:
             else:
                 ball.yDirection = 1
 
+    if len(block_group) == 0:
+        running = False  # Game ends when all balls hit
+
+    if len(ball_group) == 0:
+        player_lives -= 1
+        ball = Ball(player.rect.centerx, player.rect.top, 5, 5, 5, ball_img)
+        ball_group.add(ball)
+        all_sprites.add(ball)
+
+    if player_lives <= 0:
+        running = False
+
+    # Events
     for event in pg.event.get():
         if event.type == pg.QUIT:
             running = False

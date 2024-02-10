@@ -4,5 +4,6 @@ SCREEN_HEIGHT = 800
 FPS = 60
 POWER_UPS = ["IncreaseSize", "DecreaseSize", "AddBall", "ExtraLife", "AddManyBalls"]
 # Colours
-BG = (144, 201, 120)
+GAME_BG = (144, 201, 120)
+MENU_BG = (235, 65, 54)
 BLACK = (0, 0, 0)

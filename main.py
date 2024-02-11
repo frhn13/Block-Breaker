@@ -23,6 +23,22 @@ def draw_bg(bg_colour):
     screen.fill(bg_colour)
 
 
+def create_level(current_level, no_rows, no_columns, speed):
+    match current_level:
+        case 1:
+            damage = 2
+            lives = 3
+        case 2:
+            damage = 1
+            lives = 3
+        case 3:
+            damage = 1
+            lives = 2
+        case _:
+            damage, lives = 0, 0
+    return ball, damage, lives, block_group, all_sprites, player
+
+
 class FadeScreen:
     def __init__(self, colour, speed, fade_type):
         self.colour = colour
@@ -68,10 +84,14 @@ in_game = False
 setup_level = False
 game_level = 1
 ball_speed = 5
+player_lives = 3
+block_damage = 2
+max_blocks = 25
 
 # Images
 player_img = pg.image.load("img/playerBlock.png").convert_alpha()
 block_img = pg.image.load("img/Block.png").convert_alpha()
+damaged_block_img = pg.image.load("img/CrackedBlock.png").convert_alpha()
 ball_img = pg.image.load("img/playerBlock.png").convert_alpha()
 power_up_imgs = [pg.image.load("img/bigger.png").convert_alpha(),
                  pg.image.load("img/smaller.png").convert_alpha(),
@@ -118,53 +138,63 @@ while running:
 
     if setup_level:
         # Initial game setup
-        player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 75, 10, 150, 15, player_img)
         match game_level:
             case 1:
+                ball_speed = 5
                 player_lives = 3
-                ball = Ball(player.rect.centerx, player.rect.top, ball_speed, 5, 5, ball_img)
+                block_damage = 2
+
+                player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 75, 10, 150, 15, player_img)
                 all_sprites.add(player)
-                all_sprites.add(ball)
-                ball_group.add(ball)
                 for x in range(5):
                     for y in range(5):
                         block = Block(y * SCREEN_WIDTH // 5, x * 25, SCREEN_WIDTH // 5, 25, block_img)
                         block_group.add(block)
                         all_sprites.add(block)
+                ball = Ball(player.rect.centerx, player.rect.top, ball_speed, 5, 5, ball_img)
+                all_sprites.add(ball)
+                ball_group.add(ball)
+                print(len(block_group))
                 setup_level = False
                 in_game = True
             case 2:
                 if next_level_fade.fade():
                     write_text(SCREEN_WIDTH // 2 - 100, 100, "Next Level", BLACK, winning_font)
                     if next_level_button.display(screen):
-                        next_level_fade.fade_counter = 0
+                        ball_speed = 7
                         player_lives = 3
-                        ball = Ball(player.rect.centerx, player.rect.top, ball_speed, 5, 5, ball_img)
+                        block_damage = 1
+
+                        player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 75, 10, 150, 15, player_img)
                         all_sprites.add(player)
-                        all_sprites.add(ball)
-                        ball_group.add(ball)
-                        for x in range(5):
-                            for y in range(5):
-                                block = Block(y * SCREEN_WIDTH // 5, x * 25, SCREEN_WIDTH // 5, 25, block_img)
+                        for x in range(6):
+                            for y in range(7):
+                                block = Block(y * SCREEN_WIDTH // 7, x * 25, SCREEN_WIDTH // 7, 25, block_img)
                                 block_group.add(block)
                                 all_sprites.add(block)
+                        ball = Ball(player.rect.centerx, player.rect.top, ball_speed, 5, 5, ball_img)
+                        all_sprites.add(ball)
+                        ball_group.add(ball)
                         setup_level = False
                         in_game = True
             case 3:
                 if next_level_fade.fade():
                     write_text(SCREEN_WIDTH // 2 - 100, 100, "Next Level", BLACK, winning_font)
                     if next_level_button.display(screen):
-                        next_level_fade.fade_counter = 0
-                        player_lives = 3
-                        ball = Ball(player.rect.centerx, player.rect.top, ball_speed, 5, 5, ball_img)
+                        ball_speed = 9
+                        player_lives = 2
+                        block_damage = 1
+
+                        player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 75, 10, 150, 15, player_img)
                         all_sprites.add(player)
-                        all_sprites.add(ball)
-                        ball_group.add(ball)
-                        for x in range(5):
-                            for y in range(5):
-                                block = Block(y * SCREEN_WIDTH // 5, x * 25, SCREEN_WIDTH // 5, 25, block_img)
+                        for x in range(7):
+                            for y in range(10):
+                                block = Block(y * SCREEN_WIDTH // 10, x * 25, SCREEN_WIDTH // 10, 25, block_img)
                                 block_group.add(block)
                                 all_sprites.add(block)
+                        ball = Ball(player.rect.centerx, player.rect.top, ball_speed, 5, 5, ball_img)
+                        all_sprites.add(ball)
+                        ball_group.add(ball)
                         setup_level = False
                         in_game = True
             case _:
@@ -235,15 +265,20 @@ while running:
                         all_sprites.add(ball)
 
         for ball in ball_group:
-            ballBlockCollision = pg.sprite.spritecollide(ball, block_group, True)
+            ballBlockCollision = pg.sprite.spritecollide(ball, block_group, False)
             for collision in ballBlockCollision:
-                if random.random() < 1:
-                    power_up_type = random.randint(0, 4)
-                    power_up_speed = random.randint(1, 5)
-                    power_up = PowerUp(collision.rect.centerx, collision.rect.bottom, power_up_imgs[power_up_type],
-                                       POWER_UPS[power_up_type], power_up_speed)
-                    power_up_group.add(power_up)
-                    all_sprites.add(power_up)
+                collision.health -= block_damage
+                if collision.health <= 0:
+                    collision.kill()
+                    if random.random() < 1:
+                        power_up_type = random.randint(0, 4)
+                        power_up_speed = random.randint(1, 5)
+                        power_up = PowerUp(collision.rect.centerx, collision.rect.bottom, power_up_imgs[power_up_type],
+                                           POWER_UPS[power_up_type], power_up_speed)
+                        power_up_group.add(power_up)
+                        all_sprites.add(power_up)
+                else:
+                    collision.update_damage(damaged_block_img)
                 if ball.rect.centerx < (collision.rect.centerx - (collision.rect.centerx // 4)):
                     ball.xDirection = -1
                 if (collision.rect.centerx - (collision.rect.centerx // 4)) <= ball.rect.centerx < (
@@ -265,7 +300,7 @@ while running:
                 else:
                     ball.yDirection = 1
 
-        if len(block_group) <= 24:
+        if len(block_group) <= 0:
             all_sprites.empty()
             block_group.empty()
             power_up_group.empty()

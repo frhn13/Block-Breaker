@@ -23,21 +23,38 @@ def draw_bg(bg_colour):
     screen.fill(bg_colour)
 
 
-class FadeOut:
-    def __init__(self, colour, speed):
+class FadeScreen:
+    def __init__(self, colour, speed, fade_type):
         self.colour = colour
         self.fade_counter = 0
         self.speed = speed
+        self.fade_type = fade_type
 
     def fade(self):
         fade_complete = False
         self.fade_counter += self.speed
-        pg.draw.rect(screen, self.colour, (0, 0, SCREEN_WIDTH, 0 + self.fade_counter))  # Moves top to bottom
-        pg.draw.rect(screen, self.colour, (0, SCREEN_HEIGHT - self.fade_counter, SCREEN_WIDTH, SCREEN_HEIGHT))  # Moves bottom to top
-        pg.draw.rect(screen, self.colour, (0, 0, 0 + self.fade_counter, SCREEN_HEIGHT))  # Moves left to right
-        pg.draw.rect(screen, self.colour, (SCREEN_WIDTH - self.fade_counter, 0, SCREEN_WIDTH, SCREEN_HEIGHT))  # Moves right to left
-        if self.fade_counter > SCREEN_WIDTH // 2:
-            fade_complete = True
+        match self.fade_type:
+            case "GameOver":
+                pg.draw.rect(screen, self.colour, (0, 0, SCREEN_WIDTH, 0 + self.fade_counter))  # Moves top to bottom
+                pg.draw.rect(screen, self.colour,
+                             (0, SCREEN_HEIGHT - self.fade_counter, SCREEN_WIDTH, SCREEN_HEIGHT))  # Moves bottom to top
+                pg.draw.rect(screen, self.colour, (0, 0, 0 + self.fade_counter, SCREEN_HEIGHT))  # Moves left to right
+                pg.draw.rect(screen, self.colour,
+                             (SCREEN_WIDTH - self.fade_counter, 0, SCREEN_WIDTH, SCREEN_HEIGHT))  # Moves right to left
+                if self.fade_counter > SCREEN_WIDTH // 1.5:
+                    fade_complete = True
+            case "NextLevel":
+                pg.draw.rect(screen, self.colour, (0, 0, 0 + self.fade_counter, SCREEN_HEIGHT))  # Moves left to right
+                pg.draw.rect(screen, self.colour,
+                             (SCREEN_WIDTH - self.fade_counter, 0, SCREEN_WIDTH, SCREEN_HEIGHT))  # Moves right to left
+                if self.fade_counter > SCREEN_WIDTH // 2:
+                    fade_complete = True
+            case "GameFinished":
+                pg.draw.rect(screen, self.colour, (0, 0, SCREEN_WIDTH, 0 + self.fade_counter))  # Moves top to bottom
+                pg.draw.rect(screen, self.colour,
+                             (0, SCREEN_HEIGHT - self.fade_counter, SCREEN_WIDTH, SCREEN_HEIGHT))  # Moves bottom to top
+                if self.fade_counter > SCREEN_WIDTH // 2:
+                    fade_complete = True
         return fade_complete
 
 
@@ -48,24 +65,28 @@ clock = pg.time.Clock()
 running = True
 in_menu = True
 in_game = False
+setup_level = False
+game_level = 1
+ball_speed = 5
 
 # Images
 player_img = pg.image.load("img/playerBlock.png").convert_alpha()
 block_img = pg.image.load("img/Block.png").convert_alpha()
 ball_img = pg.image.load("img/playerBlock.png").convert_alpha()
 power_up_imgs = [pg.image.load("img/bigger.png").convert_alpha(),
-                pg.image.load("img/smaller.png").convert_alpha(),
-                pg.image.load("img/ball.png").convert_alpha(),
-                pg.image.load("img/life.png").convert_alpha(),
-                pg.image.load("img/more_ball.png").convert_alpha()]
+                 pg.image.load("img/smaller.png").convert_alpha(),
+                 pg.image.load("img/ball.png").convert_alpha(),
+                 pg.image.load("img/life.png").convert_alpha(),
+                 pg.image.load("img/more_ball.png").convert_alpha()]
 lives_img = pg.transform.scale(pg.image.load("img/heart.png").convert_alpha(), (20, 20))
 start_button_img = pg.image.load("img/start_btn.png").convert_alpha()
 end_button_img = pg.image.load("img/exit_btn.png").convert_alpha()
-restart_button_img = pg.image.load("img/restart_btn.png").convert_alpha()
+restart_button_img = pg.transform.scale(pg.image.load("img/restart_btn.png").convert_alpha(), (261, 99))
 
 # Fonts
 lives_font = pg.font.SysFont("Futura", 40)
 game_over_font = pg.font.SysFont("Futura", 50)
+winning_font = pg.font.SysFont("Futura", 50)
 
 # Make the sprite groups
 all_sprites = pg.sprite.Group()
@@ -73,10 +94,17 @@ ball_group = pg.sprite.Group()
 block_group = pg.sprite.Group()
 power_up_group = pg.sprite.Group()
 
+# Game buttons
 start_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 200, start_button_img)
 end_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 200, end_button_img)
 restart_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, restart_button_img)
-lives_lost_fade = FadeOut(BLACK, 5)
+next_level_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, start_button_img)
+end_game_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, end_button_img)
+
+# Fade animations
+lives_lost_fade = FadeScreen(BLACK, 5, "GameOver")
+next_level_fade = FadeScreen(GREEN, 4, "NextLevel")
+beat_game_fade = FadeScreen(MENU_BG, 4, "GameFinished")
 
 while running:
     clock.tick(FPS)
@@ -84,21 +112,69 @@ while running:
         draw_bg(MENU_BG)
         if start_button.display(screen):
             in_menu = False
-            # Initial game setup
-            player_lives = 1
-            player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 75, 10, 150, 15, player_img)
-            ball = Ball(player.rect.centerx, player.rect.top, 5, 5, 5, ball_img)
-            all_sprites.add(player)
-            all_sprites.add(ball)
-            ball_group.add(ball)
-            for x in range(5):
-                for y in range(5):
-                    block = Block(y * SCREEN_WIDTH // 5, x * 25, SCREEN_WIDTH // 5, 25, block_img)
-                    block_group.add(block)
-                    all_sprites.add(block)
-            in_game = True
+            setup_level = True
         if end_button.display(screen):
             running = False
+
+    if setup_level:
+        # Initial game setup
+        player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 75, 10, 150, 15, player_img)
+        match game_level:
+            case 1:
+                player_lives = 3
+                ball = Ball(player.rect.centerx, player.rect.top, ball_speed, 5, 5, ball_img)
+                all_sprites.add(player)
+                all_sprites.add(ball)
+                ball_group.add(ball)
+                for x in range(5):
+                    for y in range(5):
+                        block = Block(y * SCREEN_WIDTH // 5, x * 25, SCREEN_WIDTH // 5, 25, block_img)
+                        block_group.add(block)
+                        all_sprites.add(block)
+                setup_level = False
+                in_game = True
+            case 2:
+                if next_level_fade.fade():
+                    write_text(SCREEN_WIDTH // 2 - 100, 100, "Next Level", BLACK, winning_font)
+                    if next_level_button.display(screen):
+                        next_level_fade.fade_counter = 0
+                        player_lives = 3
+                        ball = Ball(player.rect.centerx, player.rect.top, ball_speed, 5, 5, ball_img)
+                        all_sprites.add(player)
+                        all_sprites.add(ball)
+                        ball_group.add(ball)
+                        for x in range(5):
+                            for y in range(5):
+                                block = Block(y * SCREEN_WIDTH // 5, x * 25, SCREEN_WIDTH // 5, 25, block_img)
+                                block_group.add(block)
+                                all_sprites.add(block)
+                        setup_level = False
+                        in_game = True
+            case 3:
+                if next_level_fade.fade():
+                    write_text(SCREEN_WIDTH // 2 - 100, 100, "Next Level", BLACK, winning_font)
+                    if next_level_button.display(screen):
+                        next_level_fade.fade_counter = 0
+                        player_lives = 3
+                        ball = Ball(player.rect.centerx, player.rect.top, ball_speed, 5, 5, ball_img)
+                        all_sprites.add(player)
+                        all_sprites.add(ball)
+                        ball_group.add(ball)
+                        for x in range(5):
+                            for y in range(5):
+                                block = Block(y * SCREEN_WIDTH // 5, x * 25, SCREEN_WIDTH // 5, 25, block_img)
+                                block_group.add(block)
+                                all_sprites.add(block)
+                        setup_level = False
+                        in_game = True
+            case _:
+                if beat_game_fade.fade():
+                    write_text(SCREEN_WIDTH // 2 - 100, 100, "You Won!", BLACK, winning_font)
+                    if end_game_button.display(screen):
+                        setup_level = False
+                        in_menu = True
+                        game_level = 1
+                        beat_game_fade.fade_counter = 0
 
     if in_game:
         draw_bg(GAME_BG)  # Background redrawn every iteration
@@ -109,20 +185,22 @@ while running:
 
         write_text(10, SCREEN_HEIGHT - 50, f"LIVES: ", BLACK, lives_font)
         for x in range(player_lives):
-            screen.blit(lives_img, (100 + (x*30), SCREEN_HEIGHT - 45))
+            screen.blit(lives_img, (100 + (x * 30), SCREEN_HEIGHT - 45))
 
         # Collisions
         playerBallCollision = pg.sprite.spritecollide(player, ball_group, False)
         for collision in playerBallCollision:
             if collision.rect.centerx < (player.rect.centerx - (player.rect.centerx // 4)):
                 collision.xDirection = -1
-            if (player.rect.centerx - (player.rect.centerx // 4)) <= collision.rect.centerx < (player.rect.centerx - (player.rect.centerx // 6)):
+            if (player.rect.centerx - (player.rect.centerx // 4)) <= collision.rect.centerx < (
+                    player.rect.centerx - (player.rect.centerx // 6)):
                 collision.xDirection = -0.75
             elif (player.rect.centerx - (player.rect.centerx // 6)) <= collision.rect.centerx < player.rect.centerx:
                 collision.xDirection = -0.5
             elif (player.rect.centerx + player.rect.centerx // 6) >= collision.rect.centerx > player.rect.centerx:
                 collision.xDirection = 0.5
-            elif (player.rect.centerx + player.rect.centerx // 4) >= collision.rect.centerx > (player.rect.centerx + player.rect.centerx // 6):
+            elif (player.rect.centerx + player.rect.centerx // 4) >= collision.rect.centerx > (
+                    player.rect.centerx + player.rect.centerx // 6):
                 collision.xDirection = 0.75
             else:
                 collision.xDirection = 1
@@ -132,15 +210,17 @@ while running:
         for collision in playerPowerUpCollision:
             match collision.power_up_type:
                 case "IncreaseSize":
-                    player.image = pg.transform.scale(player.image, (player.image.get_width() + 10, player.image.get_height()))
+                    player.image = pg.transform.scale(player.image,
+                                                      (player.image.get_width() + 10, player.image.get_height()))
                     if player.image.get_width() > 250:
                         player.image = pg.transform.scale(player.image, (250, player.image.get_height()))
                 case "DecreaseSize":
-                    player.image = pg.transform.scale(player.image, (player.image.get_width() - 10, player.image.get_height()))
+                    player.image = pg.transform.scale(player.image,
+                                                      (player.image.get_width() - 10, player.image.get_height()))
                     if player.image.get_width() < 80:
                         player.image = pg.transform.scale(player.image, (80, player.image.get_height()))
                 case "AddBall":
-                    ball = Ball(player.rect.centerx, player.rect.top, 5, 5, 5, ball_img)
+                    ball = Ball(player.rect.centerx, player.rect.top, ball_speed, 5, 5, ball_img)
                     ball_group.add(ball)
                     all_sprites.add(ball)
                 case "ExtraLife":
@@ -149,14 +229,15 @@ while running:
                 case "AddManyBalls":
                     no_balls = random.randint(2, 5)
                     for x in range(no_balls):
-                        ball = Ball(player.rect.right-(player.image.get_width()//(x+1)), player.rect.top, 5, 5, 5, ball_img)
+                        ball = Ball(player.rect.right - (player.image.get_width() // (x + 1)), player.rect.top,
+                                    ball_speed, 5, 5, ball_img)
                         ball_group.add(ball)
                         all_sprites.add(ball)
 
         for ball in ball_group:
             ballBlockCollision = pg.sprite.spritecollide(ball, block_group, True)
             for collision in ballBlockCollision:
-                if random.random() < 0.2:
+                if random.random() < 1:
                     power_up_type = random.randint(0, 4)
                     power_up_speed = random.randint(1, 5)
                     power_up = PowerUp(collision.rect.centerx, collision.rect.bottom, power_up_imgs[power_up_type],
@@ -184,16 +265,21 @@ while running:
                 else:
                     ball.yDirection = 1
 
-        if len(block_group) == 0:
+        if len(block_group) <= 24:
             all_sprites.empty()
+            block_group.empty()
+            power_up_group.empty()
+            ball_group.empty()
+            game_level += 1
             in_game = False
-            in_menu = True  # Game ends when all balls hit
+            setup_level = True  # Game ends when all balls hit
 
-        if len(ball_group) == 0:
+        if len(ball_group) == 0 and in_game:
             player_lives -= 1
-            ball = Ball(player.rect.centerx, player.rect.top, 5, 5, 5, ball_img)
-            ball_group.add(ball)
-            all_sprites.add(ball)
+            if player_lives > 0:
+                ball = Ball(player.rect.centerx, player.rect.top, ball_speed, 5, 5, ball_img)
+                ball_group.add(ball)
+                all_sprites.add(ball)
 
         if player_lives <= 0:
             all_sprites.empty()
@@ -202,6 +288,7 @@ while running:
                 if restart_button.display(screen):
                     in_game = False
                     in_menu = True
+                    lives_lost_fade.fade_counter = 0
 
     # Events
     for event in pg.event.get():

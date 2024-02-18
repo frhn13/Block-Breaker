@@ -15,7 +15,7 @@ def tables_setup():
 
     c_scores.execute("""CREATE TABLE if not exists scores
                         (score INTEGER NOT NULL,
-                        time TEXT NOT NULL,
+                        time REAL NOT NULL,
                         username TEXT NOT NULL)""")
     conn_scores.commit()
 
@@ -44,3 +44,21 @@ def login_player(username, password):
         return True
     else:
         return False
+
+
+def add_player_score(username, score, time):
+    conn = sqlite3.connect("tables/scores.db")
+    c_scores = conn.cursor()
+    c_scores.execute(f"INSERT INTO scores VALUES ('{score}', '{time}', '{username}')")
+    conn.commit()
+    conn.close()
+
+
+def retrieve_top_scores():
+    conn = sqlite3.connect("tables/scores.db")
+    c_scores = conn.cursor()
+    c_scores.execute(f"SELECT * FROM scores ORDER BY score DESC, time DESC LIMIT 5")
+    top_scores = c_scores.fetchall()
+    conn.commit()
+    conn.close()
+    return top_scores

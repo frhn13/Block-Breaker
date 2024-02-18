@@ -1,5 +1,6 @@
 import pygame as pg
 import random
+import time
 
 from Block import Block
 from Player import Player
@@ -103,13 +104,16 @@ start_button_img = pg.image.load("img/start_btn.png").convert_alpha()
 end_button_img = pg.image.load("img/exit_btn.png").convert_alpha()
 restart_button_img = pg.transform.scale(pg.image.load("img/restart_btn.png").convert_alpha(), (261, 99))
 endless_button_img = pg.transform.scale(pg.image.load("img/endless_btn.png").convert_alpha(), (261, 99))
+leaderboard_button_img = pg.transform.scale(pg.image.load("img/leaderboard_btn.png").convert_alpha(), (261, 99))
 login_button_img = pg.transform.scale(pg.image.load("img/login_btn.png").convert_alpha(), (261, 99))
 sign_up_button_img = pg.transform.scale(pg.image.load("img/sign_up_btn.png").convert_alpha(), (261, 99))
+menu_button_img = pg.transform.scale(pg.image.load("img/menu_btn.png").convert_alpha(), (261, 99))
 
 # Fonts
 lives_font = pg.font.SysFont("Futura", 40)
 game_over_font = pg.font.SysFont("Futura", 50)
 winning_font = pg.font.SysFont("Futura", 50)
+title_font = pg.font.SysFont("Futura", 50)
 
 # Make the sprite groups
 all_sprites = pg.sprite.Group()
@@ -123,11 +127,14 @@ end_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 200, end_button_img)
 restart_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, restart_button_img)
 next_level_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, start_button_img)
 end_game_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, end_button_img)
-endless_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, endless_button_img)
+endless_button = Button(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2, endless_button_img)
+leaderboard_button = Button(SCREEN_WIDTH // 2 + 250, SCREEN_HEIGHT // 2, leaderboard_button_img)
 login_button = Button(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2, login_button_img)
 sign_up_button = Button(SCREEN_WIDTH // 2 + 250, SCREEN_HEIGHT // 2, sign_up_button_img)
-sign_up_page_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, sign_up_button_img)
-login_button_page_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, login_button_img)
+sign_up_page_button = Button(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2 + 200, sign_up_button_img)
+login_page_button = Button(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2 + 200, login_button_img)
+menu_button = Button(SCREEN_WIDTH // 2 + 250, SCREEN_HEIGHT // 2 + 200, menu_button_img)
+leaderboard_menu_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 100, menu_button_img)
 
 # Fade animations
 lives_lost_fade = FadeScreen(BLACK, 5, "GameOver")
@@ -144,10 +151,13 @@ while running:
             draw_bg(MENU_BG)
             player_added = True
             login_valid = True
+            username = ""
+            password = ""
             if login_button.display(screen):
                 game_state = GAME_STATES[7]
             if sign_up_button.display(screen):
                 game_state = GAME_STATES[6]
+
         case "SignUp":
             draw_bg(MENU_BG)
             write_text(100, 100, f"Username: {username}", BLACK, lives_font)
@@ -178,8 +188,11 @@ while running:
                 player_added = add_new_player(username, password)
                 if player_added:
                     game_state = GAME_STATES[5]
+            if menu_button.display(screen):
+                game_state = GAME_STATES[5]
             if not player_added:
-                write_text(SCREEN_WIDTH//2-200, SCREEN_HEIGHT//2+100, "Username already in use", BLACK, lives_font)
+                write_text(SCREEN_WIDTH // 2 - 200, SCREEN_HEIGHT // 2 + 100, "Username already in use", BLACK,
+                           lives_font)
 
         case "Login":
             draw_bg(MENU_BG)
@@ -207,10 +220,12 @@ while running:
                             username = username[:-1]
                         elif password_active:
                             password = password[:-1]
-            if login_button_page_button.display(screen):
+            if login_page_button.display(screen):
                 login_valid = login_player(username, password)
                 if login_valid:
                     game_state = GAME_STATES[0]
+            if menu_button.display(screen):
+                game_state = GAME_STATES[5]
             if not login_valid:
                 write_text(SCREEN_WIDTH // 2 - 200, SCREEN_HEIGHT // 2 + 100, "Login details are invalid", BLACK,
                            lives_font)
@@ -228,7 +243,21 @@ while running:
                 endless = True
                 game_level = 5
                 score = 0
+                start_time = time.perf_counter()
                 game_state = GAME_STATES[1]
+            if leaderboard_button.display(screen):
+                game_state = GAME_STATES[8]
+
+        case "Leaderboard":
+            draw_bg(MENU_BG)
+            top_scores = retrieve_top_scores()
+            write_text(SCREEN_WIDTH // 2 - 100, 25, "Top 5 Scores", BLACK, title_font)
+            for i in range(0, len(top_scores)):
+                write_text(SCREEN_WIDTH // 2 - 300, (100 * (1 + i)) + 25, f"Username: {top_scores[i][2]}, Score: {top_scores[i][0]}, Time: {top_scores[i][1]}",
+                           BLACK, lives_font)
+            if leaderboard_menu_button.display(screen):
+                game_state = GAME_STATES[0]
+
         case "Setup":
             # Initial game setup
             match game_level:
@@ -284,7 +313,7 @@ while running:
                     for x in range(5):
                         for y in range(5):
                             # if x == 3 or x==4:
-                            block = Block(y * SCREEN_WIDTH // 5, x * 75, SCREEN_WIDTH // 5, 75, block_img)
+                            block = Block(y * SCREEN_WIDTH // 5, x * 25, SCREEN_WIDTH // 5, 25, block_img)
                             block_group.add(block)
                             all_sprites.add(block)
                     max_blocks = len(block_group) - 1
@@ -342,7 +371,7 @@ while running:
                 screen.blit(lives_img, (100 + (x * 30), SCREEN_HEIGHT - 45))
 
             if endless:
-                write_text(SCREEN_WIDTH-170, SCREEN_HEIGHT - 50, f"SCORE: {score}", BLACK, lives_font)
+                write_text(SCREEN_WIDTH - 170, SCREEN_HEIGHT - 50, f"SCORE: {score}", BLACK, lives_font)
 
             # Collisions
             playerBallCollision = pg.sprite.spritecollide(player, ball_group, False)
@@ -401,7 +430,8 @@ while running:
                         if random.random() < 1:
                             power_up_type = random.randint(0, 4)
                             power_up_speed = random.randint(1, 5)
-                            power_up = PowerUp(collision.rect.centerx, collision.rect.bottom, power_up_imgs[power_up_type],
+                            power_up = PowerUp(collision.rect.centerx, collision.rect.bottom,
+                                               power_up_imgs[power_up_type],
                                                POWER_UPS[power_up_type], power_up_speed)
                             power_up_group.add(power_up)
                             all_sprites.add(power_up)
@@ -450,9 +480,13 @@ while running:
                     all_sprites.add(ball)
 
             if player_lives <= 0 and game_state == GAME_STATES[2]:
+                end_time = time.perf_counter()
                 if lives_lost_fade.fade():
                     write_text(SCREEN_WIDTH // 2 - 100, 100, "Game Over!", WHITE, game_over_font)
                     if restart_button.display(screen):
+                        if endless:
+                            total_time = round(end_time - start_time, 2)
+                            add_player_score(username, score, total_time)
                         endless = False
                         all_sprites.empty()
                         block_group.empty()

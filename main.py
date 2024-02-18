@@ -82,6 +82,11 @@ block_damage = 2
 score = 0
 max_blocks = 25
 username = ""
+password = ""
+username_active = False
+password_active = False
+player_added = True
+login_valid = True
 
 # Images
 player_img = pg.image.load("img/playerBlock.png").convert_alpha()
@@ -121,6 +126,8 @@ end_game_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, end_button_img)
 endless_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, endless_button_img)
 login_button = Button(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2, login_button_img)
 sign_up_button = Button(SCREEN_WIDTH // 2 + 250, SCREEN_HEIGHT // 2, sign_up_button_img)
+sign_up_page_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, sign_up_button_img)
+login_button_page_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, login_button_img)
 
 # Fade animations
 lives_lost_fade = FadeScreen(BLACK, 5, "GameOver")
@@ -135,24 +142,79 @@ while running:
     match game_state:
         case "Register":
             draw_bg(MENU_BG)
+            player_added = True
+            login_valid = True
             if login_button.display(screen):
-                pass
+                game_state = GAME_STATES[7]
             if sign_up_button.display(screen):
                 game_state = GAME_STATES[6]
         case "SignUp":
             draw_bg(MENU_BG)
             write_text(100, 100, f"Username: {username}", BLACK, lives_font)
+            write_text(100, 200, f"Password: {password}", BLACK, lives_font)
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     pg.quit()
                 if event.type == pg.KEYDOWN:
+                    if event.key == pg.K_1:
+                        username_active = True
+                    if event.key == pg.K_2:
+                        password_active = True
+                    elif event.key == pg.K_0:
+                        username_active = False
+                        password_active = False
                     # Can only be alphanumeric
-                    if (97 <= event.key <= 122 or 48 <= event.key <= 57) and len(username) < 10:
-                        username += event.unicode
+                    if 97 <= event.key <= 122 or 48 <= event.key <= 57:
+                        if username_active and len(username) < 10:
+                            username += event.unicode
+                        elif password_active and len(password) < 15:
+                            password += event.unicode
                     elif event.key == pg.K_BACKSPACE:
-                        username = username[:-1]
+                        if username_active:
+                            username = username[:-1]
+                        elif password_active:
+                            password = password[:-1]
+            if sign_up_page_button.display(screen) and 4 <= len(username) <= 10 and 6 <= len(password) <= 15:
+                player_added = add_new_player(username, password)
+                if player_added:
+                    game_state = GAME_STATES[5]
+            if not player_added:
+                write_text(SCREEN_WIDTH//2-200, SCREEN_HEIGHT//2+100, "Username already in use", BLACK, lives_font)
+
         case "Login":
-            pass
+            draw_bg(MENU_BG)
+            write_text(100, 100, f"Username: {username}", BLACK, lives_font)
+            write_text(100, 200, f"Password: {password}", BLACK, lives_font)
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    pg.quit()
+                if event.type == pg.KEYDOWN:
+                    if event.key == pg.K_1:
+                        username_active = True
+                    if event.key == pg.K_2:
+                        password_active = True
+                    elif event.key == pg.K_0:
+                        username_active = False
+                        password_active = False
+                    # Can only be alphanumeric
+                    if 97 <= event.key <= 122 or 48 <= event.key <= 57:
+                        if username_active and len(username) < 10:
+                            username += event.unicode
+                        elif password_active and len(password) < 15:
+                            password += event.unicode
+                    elif event.key == pg.K_BACKSPACE:
+                        if username_active:
+                            username = username[:-1]
+                        elif password_active:
+                            password = password[:-1]
+            if login_button_page_button.display(screen):
+                login_valid = login_player(username, password)
+                if login_valid:
+                    game_state = GAME_STATES[0]
+            if not login_valid:
+                write_text(SCREEN_WIDTH // 2 - 200, SCREEN_HEIGHT // 2 + 100, "Login details are invalid", BLACK,
+                           lives_font)
+
         case "MainMenu":
             draw_bg(MENU_BG)
             if start_button.display(screen):

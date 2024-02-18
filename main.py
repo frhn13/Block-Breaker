@@ -7,6 +7,7 @@ from Ball import Ball
 from Constants import *
 from Powerup import PowerUp
 from Button import Button
+from database_functions import *
 
 pg.init()
 
@@ -21,6 +22,10 @@ def write_text(text_x, text_y, contents, colour, font):
 
 def draw_bg(bg_colour):
     screen.fill(bg_colour)
+
+
+def sign_up_page():
+    pass
 
 
 class FadeScreen:
@@ -69,13 +74,14 @@ setup_level = False
 endless = False
 player_x = 0
 player_y = 0
-game_state = GAME_STATES[0]
+game_state = GAME_STATES[5]
 game_level = 1
 ball_speed = 5
 player_lives = 3
 block_damage = 2
 score = 0
 max_blocks = 25
+username = ""
 
 # Images
 player_img = pg.image.load("img/playerBlock.png").convert_alpha()
@@ -92,6 +98,8 @@ start_button_img = pg.image.load("img/start_btn.png").convert_alpha()
 end_button_img = pg.image.load("img/exit_btn.png").convert_alpha()
 restart_button_img = pg.transform.scale(pg.image.load("img/restart_btn.png").convert_alpha(), (261, 99))
 endless_button_img = pg.transform.scale(pg.image.load("img/endless_btn.png").convert_alpha(), (261, 99))
+login_button_img = pg.transform.scale(pg.image.load("img/login_btn.png").convert_alpha(), (261, 99))
+sign_up_button_img = pg.transform.scale(pg.image.load("img/sign_up_btn.png").convert_alpha(), (261, 99))
 
 # Fonts
 lives_font = pg.font.SysFont("Futura", 40)
@@ -111,15 +119,40 @@ restart_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, restart_button_im
 next_level_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, start_button_img)
 end_game_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, end_button_img)
 endless_button = Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, endless_button_img)
+login_button = Button(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2, login_button_img)
+sign_up_button = Button(SCREEN_WIDTH // 2 + 250, SCREEN_HEIGHT // 2, sign_up_button_img)
 
 # Fade animations
 lives_lost_fade = FadeScreen(BLACK, 5, "GameOver")
 next_level_fade = FadeScreen(GREEN, 4, "NextLevel")
 beat_game_fade = FadeScreen(MENU_BG, 4, "GameFinished")
 
+# Creates tables
+tables_setup()
+
 while running:
     clock.tick(FPS)
     match game_state:
+        case "Register":
+            draw_bg(MENU_BG)
+            if login_button.display(screen):
+                pass
+            if sign_up_button.display(screen):
+                game_state = GAME_STATES[6]
+        case "SignUp":
+            draw_bg(MENU_BG)
+            write_text(100, 100, f"Username: {username}", BLACK, lives_font)
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    pg.quit()
+                if event.type == pg.KEYDOWN:
+                    # Can only be alphanumeric
+                    if (97 <= event.key <= 122 or 48 <= event.key <= 57) and len(username) < 10:
+                        username += event.unicode
+                    elif event.key == pg.K_BACKSPACE:
+                        username = username[:-1]
+        case "Login":
+            pass
         case "MainMenu":
             draw_bg(MENU_BG)
             if start_button.display(screen):
@@ -329,7 +362,6 @@ while running:
                     else:
                         ball.xDirection = 1
                     if ball.rect.left <= collision.rect.right or ball.rect.right >= collision.rect.left:
-                        print("Yay")
                         ball.xDirection *= -1
                     if ball.rect.bottom <= collision.rect.bottom:
                         ball.yDirection = -1
@@ -355,12 +387,15 @@ while running:
                     ball_group.add(ball)
                     all_sprites.add(ball)
 
-            if player_lives <= 0:
-                all_sprites.empty()
+            if player_lives <= 0 and game_state == GAME_STATES[2]:
                 if lives_lost_fade.fade():
                     write_text(SCREEN_WIDTH // 2 - 100, 100, "Game Over!", WHITE, game_over_font)
                     if restart_button.display(screen):
                         endless = False
+                        all_sprites.empty()
+                        block_group.empty()
+                        power_up_group.empty()
+                        ball_group.empty()
                         game_state = GAME_STATES[0]
                         lives_lost_fade.fade_counter = 0
 

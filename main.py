@@ -1,6 +1,7 @@
 import pygame as pg
 import random
 import time
+from tkinter import messagebox
 
 from Block import Block
 from Player import Player
@@ -88,6 +89,8 @@ username_active = False
 password_active = False
 player_added = True
 login_valid = True
+username_rect = pg.Rect(250, 80, 200, 50)
+password_rect = pg.Rect(250, 180, 300, 50)
 
 # Images
 player_img = pg.image.load("img/playerBlock.png").convert_alpha()
@@ -160,34 +163,51 @@ while running:
 
         case "SignUp":
             draw_bg(MENU_BG)
+            pg.draw.rect(screen, WHITE, username_rect)
+            pg.draw.rect(screen, WHITE, password_rect)
             write_text(100, 100, f"Username: {username}", BLACK, lives_font)
-            write_text(100, 200, f"Password: {password}", BLACK, lives_font)
+            write_text(100, 200, f"Password:  {password}", BLACK, lives_font)
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     pg.quit()
-                if event.type == pg.KEYDOWN:
-                    if event.key == pg.K_1:
+                if event.type == pg.MOUSEBUTTONDOWN:
+                    if username_rect.collidepoint(event.pos):
                         username_active = True
-                    if event.key == pg.K_2:
+                        password_active = False
+                    elif password_rect.collidepoint(event.pos):
+                        username_active = False
                         password_active = True
-                    elif event.key == pg.K_0:
+                    else:
                         username_active = False
                         password_active = False
+
+                if event.type == pg.KEYDOWN:
                     # Can only be alphanumeric
-                    if 97 <= event.key <= 122 or 48 <= event.key <= 57:
-                        if username_active and len(username) < 10:
-                            username += event.unicode
-                        elif password_active and len(password) < 15:
-                            password += event.unicode
+                    if (97 <= event.key <= 122 or 48 <= event.key <= 57) and username_active and len(username) < 10:
+                        username += event.unicode
+                    elif 33 <= event.key <= 126 and password_active and len(password) < 15:
+                        password += event.unicode
                     elif event.key == pg.K_BACKSPACE:
                         if username_active:
                             username = username[:-1]
                         elif password_active:
                             password = password[:-1]
-            if sign_up_page_button.display(screen) and 4 <= len(username) <= 10 and 6 <= len(password) <= 15:
-                player_added = add_new_player(username, password)
-                if player_added:
-                    game_state = GAME_STATES[5]
+                    elif event.key == pg.K_ESCAPE:
+                        running = False
+                    else:
+                        if username_active:
+                            messagebox.showerror("Details invalid", "Username can only contain numbers or letters")
+                        else:
+                            messagebox.showerror("Details invalid", "Password can't contain that character")
+            if sign_up_page_button.display(screen):
+                if 4 <= len(username) <= 10 and 6 <= len(password) <= 15:
+                    player_added = add_new_player(username, password)
+                    if player_added:
+                        game_state = GAME_STATES[5]
+                    else:
+                        messagebox.showerror("Details invalid", "Username already in use")
+                else:
+                    messagebox.showerror("Details invalid", "Username or password is too short")
             if menu_button.display(screen):
                 game_state = GAME_STATES[5]
             if not player_added:
@@ -196,39 +216,49 @@ while running:
 
         case "Login":
             draw_bg(MENU_BG)
+            pg.draw.rect(screen, WHITE, username_rect)
+            pg.draw.rect(screen, WHITE, password_rect)
             write_text(100, 100, f"Username: {username}", BLACK, lives_font)
-            write_text(100, 200, f"Password: {password}", BLACK, lives_font)
+            write_text(100, 200, f"Password:  {password}", BLACK, lives_font)
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     pg.quit()
-                if event.type == pg.KEYDOWN:
-                    if event.key == pg.K_1:
+                if event.type == pg.MOUSEBUTTONDOWN:
+                    if username_rect.collidepoint(event.pos):
                         username_active = True
-                    if event.key == pg.K_2:
+                        password_active = False
+                    elif password_rect.collidepoint(event.pos):
+                        username_active = False
                         password_active = True
-                    elif event.key == pg.K_0:
+                    else:
                         username_active = False
                         password_active = False
+                if event.type == pg.KEYDOWN:
                     # Can only be alphanumeric
-                    if 97 <= event.key <= 122 or 48 <= event.key <= 57:
-                        if username_active and len(username) < 10:
-                            username += event.unicode
-                        elif password_active and len(password) < 15:
-                            password += event.unicode
+                    if (97 <= event.key <= 122 or 48 <= event.key <= 57) and username_active and len(username) < 10:
+                        username += event.unicode
+                    elif 33 <= event.key <= 126 and password_active and len(password) < 15:
+                        password += event.unicode
                     elif event.key == pg.K_BACKSPACE:
                         if username_active:
                             username = username[:-1]
                         elif password_active:
                             password = password[:-1]
+                    elif event.key == pg.K_ESCAPE:
+                        running = False
+                    else:
+                        if username_active:
+                            messagebox.showerror("Details invalid", "Username can only contain numbers or letters")
+                        else:
+                            messagebox.showerror("Details invalid", "Password can't contain that character")
             if login_page_button.display(screen):
                 login_valid = login_player(username, password)
                 if login_valid:
                     game_state = GAME_STATES[0]
+                else:
+                    messagebox.showerror("Login details invalid", "Login details don't match any existing users")
             if menu_button.display(screen):
                 game_state = GAME_STATES[5]
-            if not login_valid:
-                write_text(SCREEN_WIDTH // 2 - 200, SCREEN_HEIGHT // 2 + 100, "Login details are invalid", BLACK,
-                           lives_font)
 
         case "MainMenu":
             draw_bg(MENU_BG)

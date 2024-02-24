@@ -26,10 +26,6 @@ def draw_bg(bg_colour):
     screen.fill(bg_colour)
 
 
-def sign_up_page():
-    pass
-
-
 class FadeScreen:
     def __init__(self, colour, speed, fade_type):
         self.colour = colour
@@ -85,6 +81,7 @@ score = 0
 max_blocks = 25
 username = ""
 password = ""
+password_protect = ""
 username_active = False
 password_active = False
 player_added = True
@@ -97,11 +94,11 @@ player_img = pg.image.load("img/playerBlock.png").convert_alpha()
 block_img = pg.image.load("img/Block.png").convert_alpha()
 damaged_block_img = pg.image.load("img/CrackedBlock.png").convert_alpha()
 ball_img = pg.image.load("img/playerBlock.png").convert_alpha()
-power_up_imgs = [pg.image.load("img/bigger.png").convert_alpha(),
-                 pg.image.load("img/smaller.png").convert_alpha(),
+power_up_imgs = [pg.transform.scale(pg.image.load("img/bigger.png").convert_alpha(), (40, 30)),
+                 pg.transform.scale(pg.image.load("img/smaller.png").convert_alpha(), (40, 30)),
                  pg.image.load("img/ball.png").convert_alpha(),
-                 pg.image.load("img/life.png").convert_alpha(),
-                 pg.image.load("img/more_ball.png").convert_alpha()]
+                 pg.transform.scale(pg.image.load("img/life.jpg").convert_alpha(), (31, 30)),
+                 pg.transform.scale(pg.image.load("img/more_ball.png").convert_alpha(), (56, 56))]
 lives_img = pg.transform.scale(pg.image.load("img/heart.png").convert_alpha(), (20, 20))
 start_button_img = pg.image.load("img/start_btn.png").convert_alpha()
 end_button_img = pg.image.load("img/exit_btn.png").convert_alpha()
@@ -111,6 +108,18 @@ leaderboard_button_img = pg.transform.scale(pg.image.load("img/leaderboard_btn.p
 login_button_img = pg.transform.scale(pg.image.load("img/login_btn.png").convert_alpha(), (261, 99))
 sign_up_button_img = pg.transform.scale(pg.image.load("img/sign_up_btn.png").convert_alpha(), (261, 99))
 menu_button_img = pg.transform.scale(pg.image.load("img/menu_btn.png").convert_alpha(), (261, 99))
+
+# Audio
+pg.mixer.music.load("audio/Bonetrousle.mid")
+pg.mixer.music.set_volume(0.3)
+hit_block_fx = pg.mixer.Sound("audio/shot.wav")
+broke_block_fx = pg.mixer.Sound("audio/grenade.wav")
+get_power_up_fx = pg.mixer.Sound("audio/shield.wav")
+get_power_down_fx = pg.mixer.Sound("audio/rumble1.ogg")
+hit_block_fx.set_volume(0.7)
+broke_block_fx.set_volume(0.7)
+get_power_up_fx.set_volume(0.5)
+get_power_down_fx.set_volume(0.5)
 
 # Fonts
 lives_font = pg.font.SysFont("Futura", 40)
@@ -156,6 +165,7 @@ while running:
             login_valid = True
             username = ""
             password = ""
+            password_protect = ""
             if login_button.display(screen):
                 game_state = GAME_STATES[7]
             if sign_up_button.display(screen):
@@ -166,7 +176,7 @@ while running:
             pg.draw.rect(screen, WHITE, username_rect)
             pg.draw.rect(screen, WHITE, password_rect)
             write_text(100, 100, f"Username: {username}", BLACK, lives_font)
-            write_text(100, 200, f"Password:  {password}", BLACK, lives_font)
+            write_text(100, 200, f"Password:  {password_protect}", BLACK, lives_font)
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     pg.quit()
@@ -187,11 +197,13 @@ while running:
                         username += event.unicode
                     elif 33 <= event.key <= 126 and password_active and len(password) < 15:
                         password += event.unicode
+                        password_protect += "*"
                     elif event.key == pg.K_BACKSPACE:
                         if username_active:
                             username = username[:-1]
                         elif password_active:
                             password = password[:-1]
+                            password_protect = password_protect[:-1]
                     elif event.key == pg.K_ESCAPE:
                         running = False
                     else:
@@ -219,7 +231,7 @@ while running:
             pg.draw.rect(screen, WHITE, username_rect)
             pg.draw.rect(screen, WHITE, password_rect)
             write_text(100, 100, f"Username: {username}", BLACK, lives_font)
-            write_text(100, 200, f"Password:  {password}", BLACK, lives_font)
+            write_text(100, 200, f"Password:  {password_protect}", BLACK, lives_font)
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     pg.quit()
@@ -239,18 +251,15 @@ while running:
                         username += event.unicode
                     elif 33 <= event.key <= 126 and password_active and len(password) < 15:
                         password += event.unicode
+                        password_protect += "*"
                     elif event.key == pg.K_BACKSPACE:
                         if username_active:
                             username = username[:-1]
                         elif password_active:
                             password = password[:-1]
+                            password_protect = password_protect[:-1]
                     elif event.key == pg.K_ESCAPE:
                         running = False
-                    else:
-                        if username_active:
-                            messagebox.showerror("Details invalid", "Username can only contain numbers or letters")
-                        else:
-                            messagebox.showerror("Details invalid", "Password can't contain that character")
             if login_page_button.display(screen):
                 login_valid = login_player(username, password)
                 if login_valid:
@@ -281,7 +290,10 @@ while running:
         case "Leaderboard":
             draw_bg(MENU_BG)
             top_scores = retrieve_top_scores()
-            write_text(SCREEN_WIDTH // 2 - 100, 25, "Top 5 Scores", BLACK, title_font)
+            if len(top_scores) == 5:
+                write_text(SCREEN_WIDTH // 2 - 100, 25, "Top 5 Scores", BLACK, title_font)
+            else:
+                write_text(SCREEN_WIDTH // 2 - 100, 25, f"Top {len(top_scores)} Scores", BLACK, title_font)
             for i in range(0, len(top_scores)):
                 write_text(SCREEN_WIDTH // 2 - 300, (100 * (1 + i)) + 25, f"Username: {top_scores[i][2]}, Score: {top_scores[i][0]}, Time: {top_scores[i][1]}",
                            BLACK, lives_font)
@@ -292,6 +304,7 @@ while running:
             # Initial game setup
             match game_level:
                 case 1:
+                    pg.mixer.music.play(-1, 0.0, 5000)
                     ball_speed = 5
                     player_lives = 3
                     block_damage = 2
@@ -336,6 +349,7 @@ while running:
                             max_blocks = len(block_group) - 1
                             game_state = GAME_STATES[2]
                 case 5:
+                    pg.mixer.music.play(-1, 0.0, 5000)
                     ball_speed = 5
                     player_lives = 3
                     block_damage = 2
@@ -424,6 +438,7 @@ while running:
 
             playerPowerUpCollision = pg.sprite.spritecollide(player, power_up_group, True)
             for collision in playerPowerUpCollision:
+                get_power_down_fx.play() if collision.power_up_type == "DecreaseSize" else get_power_up_fx.play()
                 match collision.power_up_type:
                     case "IncreaseSize":
                         player.image = pg.transform.scale(player.image,
@@ -431,6 +446,7 @@ while running:
                         if player.image.get_width() > 250:
                             player.image = pg.transform.scale(player.image, (250, player.image.get_height()))
                     case "DecreaseSize":
+                        get_power_down_fx.play()
                         player.image = pg.transform.scale(player.image,
                                                           (player.image.get_width() - 10, player.image.get_height()))
                         if player.image.get_width() < 80:
@@ -456,6 +472,7 @@ while running:
                     collision.health -= block_damage
                     if collision.health <= 0:
                         collision.kill()
+                        broke_block_fx.play()
                         score += 1
                         if random.random() < 1:
                             power_up_type = random.randint(0, 4)
@@ -467,6 +484,7 @@ while running:
                             all_sprites.add(power_up)
                     else:
                         collision.update_damage(damaged_block_img)
+                        hit_block_fx.play()
                     if ball.rect.centerx < (collision.rect.centerx - (collision.rect.centerx // 4)):
                         ball.xDirection = -1
                     if (collision.rect.centerx - (collision.rect.centerx // 4)) <= ball.rect.centerx < (
@@ -510,6 +528,7 @@ while running:
                     all_sprites.add(ball)
 
             if player_lives <= 0 and game_state == GAME_STATES[2]:
+                pg.mixer.music.stop()
                 end_time = time.perf_counter()
                 if lives_lost_fade.fade():
                     write_text(SCREEN_WIDTH // 2 - 100, 100, "Game Over!", WHITE, game_over_font)

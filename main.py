@@ -474,7 +474,7 @@ while running:
                         collision.kill()
                         broke_block_fx.play()
                         score += 1
-                        if random.random() < 0.4 :
+                        if random.random() < 0.4:
                             power_up_type = random.randint(0, 4)
                             power_up_speed = random.randint(1, 5)
                             power_up = PowerUp(collision.rect.centerx, collision.rect.bottom,
